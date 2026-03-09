@@ -24,7 +24,7 @@ Guardrails intercepts these patterns in real-time, blocks the bad action, and se
 ## Quick Install
 
 ```bash
-git clone https://github.com/yourusername/claude-code-guardrails.git
+git clone https://github.com/mijevski-aleksandar/claude-guardrails.git
 cd claude-code-guardrails
 bash install.sh
 ```
