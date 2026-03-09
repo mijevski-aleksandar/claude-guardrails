@@ -29,10 +29,11 @@ echo -e "${GREEN}✓ Python 3 found$(python3 --version | awk '{print " ("$2")"}'
 mkdir -p "$HOOKS_DIR"
 echo -e "${GREEN}✓ Hooks directory ready: $HOOKS_DIR${NC}"
 
-# Copy only the two token-saving hooks
+# Copy hooks
 cp "$REPO_DIR/hooks/duplicate_reads.py" "$HOOKS_DIR/"
 cp "$REPO_DIR/hooks/retry_loop.py" "$HOOKS_DIR/"
-chmod +x "$HOOKS_DIR/duplicate_reads.py" "$HOOKS_DIR/retry_loop.py"
+cp "$REPO_DIR/hooks/compaction_reset.py" "$HOOKS_DIR/"
+chmod +x "$HOOKS_DIR/duplicate_reads.py" "$HOOKS_DIR/retry_loop.py" "$HOOKS_DIR/compaction_reset.py"
 echo -e "${GREEN}✓ Hooks installed${NC}"
 
 # Handle existing settings.json
@@ -76,27 +77,17 @@ else
   echo -e "${GREEN}✓ settings.json created${NC}"
 fi
 
-# Create log cleanup script
-cat > "$CLAUDE_DIR/clear-logs.sh" << 'CLEAR'
-#!/usr/bin/env bash
-rm -f /tmp/claude_read_log.json \
-       /tmp/claude_retry_log.json
-echo "✓ Claude guardrail logs cleared"
-CLEAR
-chmod +x "$CLAUDE_DIR/clear-logs.sh"
-echo -e "${GREEN}✓ Log cleanup script created at ~/.claude/clear-logs.sh${NC}"
-
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo -e "${GREEN}  Installation complete!${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "  Hooks installed:"
-echo "  • duplicate_reads   — blocks 3rd+ read of the same file"
-echo "  • retry_loop        — blocks identical tool calls repeated 3×"
+echo "  • duplicate_reads    — warns on 2nd read, blocks 3rd+ (allows re-reads if file changed)"
+echo "  • retry_loop         — warns on 2nd identical call, blocks 3rd+"
+echo "  • compaction_reset   — resets counters after context compaction"
 echo ""
-echo "  Run before each new session:"
-echo "  $ ~/.claude/clear-logs.sh"
+echo "  State auto-resets per session — no manual cleanup needed."
 echo ""
 echo "  To uninstall:"
 echo "  $ bash uninstall.sh"
