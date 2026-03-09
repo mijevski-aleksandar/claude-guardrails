@@ -1,6 +1,6 @@
-# 🛡️ Claude Code Guardrails
+# Claude Code Guardrails
 
-> A set of intelligent hooks that make Claude Code self-correcting — stopping retry loops, preventing duplicate reads, managing context pressure, and recovering from failures automatically.
+> Two lightweight hooks that save tokens by blocking duplicate file reads and retry loops in Claude Code sessions.
 
 Works globally across **all your projects and VS Code windows** with a single install.
 
@@ -8,16 +8,14 @@ Works globally across **all your projects and VS Code windows** with a single in
 
 ## Why This Exists
 
-Claude Code is powerful but can develop expensive habits mid-session:
+Claude Code can develop expensive habits mid-session:
 
-| Problem | What happens | Cost |
+| Problem | What happens | Token cost |
 |---|---|---|
-| **Duplicate reads** | Claude re-reads the same file 4–5 times | Wasted input tokens |
-| **Retry loops** | Claude repeats the same failing call over and over | Spiralling token spend |
-| **Context pressure** | Session runs too long, context degrades silently | Hallucinations, lost state |
-| **Failed tools** | Claude keeps trying variations of a broken call | Time + token waste |
+| **Duplicate reads** | Claude re-reads the same file 4-5 times | 500-3000 wasted tokens per duplicate |
+| **Retry loops** | Claude repeats the same failing call over and over | 200-2000 wasted tokens per loop |
 
-Guardrails intercepts these patterns in real-time, blocks the bad action, and sends Claude a clear explanation of what went wrong and what to do instead.
+Guardrails intercepts these patterns in real-time, blocks the wasteful action, and tells Claude to use what it already has.
 
 ---
 
@@ -25,11 +23,11 @@ Guardrails intercepts these patterns in real-time, blocks the bad action, and se
 
 ```bash
 git clone https://github.com/mijevski-aleksandar/claude-guardrails.git
-cd claude-code-guardrails
+cd claude-guardrails
 bash install.sh
 ```
 
-That's it. Hooks are installed globally to `~/.claude/` and apply to every Claude Code session on your machine — no per-project setup needed.
+That's it. Hooks are installed globally to `~/.claude/` and apply to every Claude Code session.
 
 ---
 
@@ -37,97 +35,47 @@ That's it. Hooks are installed globally to `~/.claude/` and apply to every Claud
 
 ```
 ~/.claude/
-├── settings.json          ← registers all hooks globally
+├── settings.json          ← registers hooks globally
 ├── clear-logs.sh          ← run between sessions to reset counters
 └── hooks/
     ├── duplicate_reads.py
-    ├── retry_loop.py
-    ├── context_pressure.py
-    └── failed_tools.py
+    └── retry_loop.py
 ```
 
 ---
 
 ## Hooks
 
-### 🔁 `duplicate_reads.py`
-**Fires:** `PreToolUse` → Read  
-**Blocks:** The 3rd+ read of the same file in a session  
-**Says to Claude:** *"You've already read this file. Use what you have. If you need something specific, ask."*
+### `duplicate_reads.py`
+**Fires:** `PreToolUse` on Read calls
+**Blocks:** The 3rd+ read of the same file in a session
+**Says to Claude:** *"You've already read this file. Use what you have."*
+
+Typical savings: **500-3000 tokens per blocked read** (depends on file size).
 
 **Config:** Edit `MAX_READS` in the script (default: 2)
 
 ---
 
-### ♾️ `retry_loop.py`
-**Fires:** `PreToolUse` → any tool  
-**Blocks:** The 3rd+ identical tool call (same tool, same inputs)  
-**Says to Claude:** *"This is a retry loop. Stop, explain why it's failing, and propose a different approach."*
+### `retry_loop.py`
+**Fires:** `PreToolUse` on any tool call
+**Blocks:** The 3rd+ identical tool call (same tool, same inputs)
+**Says to Claude:** *"This is a retry loop. Stop and propose a different approach."*
+
+Typical savings: **200-2000 tokens per blocked loop** (tool call + response + reasoning).
 
 **Config:** Edit `MAX_IDENTICAL` in the script (default: 2)
 
 ---
 
-### 🗜️ `auto_compact.py`
-**Fires:** `PreToolUse` → any tool  
-**Blocks:** The next tool call when `COMPACT_AT` steps have passed since the last compaction  
-**Says to Claude:** *"Run /compact now before continuing. Context needs to be compressed."*
+## Usage
 
-Works alongside `"autoCompact": false` in settings.json — you take back manual control of compaction so it happens at the right moment, not reactively when the window is already full. Recovers ~16% more context window than letting Claude Code manage it automatically.
-
-**Config:** Edit `COMPACT_AT` in the script (default: 25 steps between compactions)
-
----
-
-### 📈 `context_pressure.py`
-**Fires:** `PreToolUse` → any tool  
-**Warns at:** 30 steps (non-blocking)  
-**Blocks at:** 50 steps  
-**Says to Claude:** *"Session is critically long. Summarise what you've done, list what's incomplete, and tell the user to start a new session."*
-
-**Config:** Edit `WARN_AT` and `STOP_AT` in the script (defaults: 30, 50)
-
----
-
-### ❌ `failed_tools.py`
-**Fires:** `PostToolUse` → any tool  
-**Blocks:** After 3 total tool failures in a session  
-**Says to Claude:** *"Multiple tools have failed. List each failure, identify the root cause, and fix that before retrying."*
-
-**Config:** Edit `MAX_FAILURES` and `FAILURE_KEYWORDS` in the script
-
----
-
-### 📝 `session_summary.py`
-**Fires:** `Stop` event (when Claude finishes responding)  
-**Blocks:** Session from closing until Claude writes a structured handoff summary  
-**Writes to:** `~/.claude/last-session.md` (latest) and `~/.claude/session-history.md` (append log)
-
-The summary includes: what was worked on, what was completed, what's incomplete, key files changed, decisions made, and exact instructions for resuming. Skips sessions under 5 steps.
-
-**Config:** Edit `MIN_STEPS` in the script (default: 5) and `COMPACT_AT` thresholds
-
----
-
-## Session Workflow
-
-**Before starting a new session** — reset all counters:
+**Before each new session** — reset counters:
 ```bash
 ~/.claude/clear-logs.sh
 ```
 
-**Resume a previous session** — paste the handoff summary:
-```bash
-cat ~/.claude/last-session.md
-# Copy the output and paste it at the start of your new Claude Code session
-```
-
-**Browse session history:**
-```bash
-cat ~/.claude/session-history.md
-```
-
-Or add this alias so logs clear automatically every time you start Claude:
+Or add this alias so logs clear automatically:
 ```bash
 # ~/.bashrc or ~/.zshrc
 alias claude='~/.claude/clear-logs.sh && claude'
@@ -135,43 +83,38 @@ alias claude='~/.claude/clear-logs.sh && claude'
 
 ---
 
+## Token Savings Estimate
+
+| Metric | Value |
+|---|---|
+| Hook overhead per tool call | ~40-60 tokens (2 lightweight JSON checks) |
+| Savings per blocked duplicate read | 500-3000 tokens |
+| Savings per blocked retry loop | 200-2000 tokens |
+| **Net savings per session** | **1,000-13,000 tokens** |
+
+The hooks have asymmetric payoff: tiny cost on every call, large savings when they trigger.
+
+---
+
 ## How Hooks Work
 
-Claude Code exposes lifecycle events at key points in every session. Guardrails taps into two of them:
-
-- **`PreToolUse`** — fires before any tool runs. Exit `2` + write to stderr = tool is blocked and your message is sent to Claude.
-- **`PostToolUse`** — fires after a tool completes. Same blocking mechanism.
-
-Claude receives the stderr message as direct feedback and adjusts its behaviour accordingly. It's not just a log — Claude actually reads and acts on it.
+Claude Code exposes lifecycle events. Guardrails uses `PreToolUse` — it fires before any tool runs. Exit code `2` + stderr message = the tool call is blocked and the message is sent directly to Claude as feedback.
 
 ---
 
 ## Customising
 
-Each hook is a standalone Python script with config variables at the top. Edit thresholds directly:
+Each hook has config variables at the top:
 
 ```python
 # duplicate_reads.py
-MAX_READS = 2  # change to 3 if you want more lenient behaviour
+MAX_READS = 2  # change to 3 for more lenient behaviour
 
-# context_pressure.py
-WARN_AT = 30
-STOP_AT = 50  # increase for longer sessions
+# retry_loop.py
+MAX_IDENTICAL = 2  # change to 3 to allow more retries
 ```
 
-No restart needed — hooks are loaded fresh at each tool call.
-
----
-
-## Adding Your Own Hook
-
-See [CONTRIBUTING.md](.github/CONTRIBUTING.md) for a full guide and hook template.
-
-Some ideas:
-- **Secret scanner** — block file writes if content contains API keys
-- **Large file warning** — warn before reading files over 500 lines
-- **Test enforcer** — require tests to pass before allowing git commits
-- **Scope creep detector** — warn if Claude edits files unrelated to the original task
+No restart needed — hooks are loaded fresh on each tool call.
 
 ---
 
@@ -181,21 +124,17 @@ Some ideas:
 bash uninstall.sh
 ```
 
-Removes all hooks and restores your original `settings.json` from backup.
+Removes hooks and restores your original `settings.json` from backup.
 
 ---
 
 ## Requirements
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed
-- Python 3 (already on macOS/Linux by default)
+- Python 3
 
 ---
 
 ## License
 
-MIT — do whatever you want with it.
-
----
-
-*Inspired by sessions gone wrong. Built to make sure they don't happen again.*
+MIT

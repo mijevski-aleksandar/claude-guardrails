@@ -1,5 +1,4 @@
 {
-  "autoCompact": false,
   "hooks": {
     "PreToolUse": [
       {
@@ -12,35 +11,6 @@
           {
             "type": "command",
             "command": "python3 ~/.claude/hooks/retry_loop.py"
-          },
-          {
-            "type": "command",
-            "command": "python3 ~/.claude/hooks/auto_compact.py"
-          },
-          {
-            "type": "command",
-            "command": "python3 ~/.claude/hooks/context_pressure.py"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ~/.claude/hooks/failed_tools.py"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ~/.claude/hooks/session_summary.py"
           }
         ]
       }

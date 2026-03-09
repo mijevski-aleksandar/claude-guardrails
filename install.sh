@@ -29,9 +29,10 @@ echo -e "${GREEN}✓ Python 3 found$(python3 --version | awk '{print " ("$2")"}'
 mkdir -p "$HOOKS_DIR"
 echo -e "${GREEN}✓ Hooks directory ready: $HOOKS_DIR${NC}"
 
-# Copy hooks
-cp "$REPO_DIR/hooks/"*.py "$HOOKS_DIR/"
-chmod +x "$HOOKS_DIR/"*.py
+# Copy only the two token-saving hooks
+cp "$REPO_DIR/hooks/duplicate_reads.py" "$HOOKS_DIR/"
+cp "$REPO_DIR/hooks/retry_loop.py" "$HOOKS_DIR/"
+chmod +x "$HOOKS_DIR/duplicate_reads.py" "$HOOKS_DIR/retry_loop.py"
 echo -e "${GREEN}✓ Hooks installed${NC}"
 
 # Handle existing settings.json
@@ -79,11 +80,7 @@ fi
 cat > "$CLAUDE_DIR/clear-logs.sh" << 'CLEAR'
 #!/usr/bin/env bash
 rm -f /tmp/claude_read_log.json \
-       /tmp/claude_retry_log.json \
-       /tmp/claude_step_count.json \
-       /tmp/claude_fail_log.json \
-       /tmp/claude_compact_log.json \
-       /tmp/claude_summary_written.flag
+       /tmp/claude_retry_log.json
 echo "✓ Claude guardrail logs cleared"
 CLEAR
 chmod +x "$CLAUDE_DIR/clear-logs.sh"
@@ -97,18 +94,9 @@ echo ""
 echo "  Hooks installed:"
 echo "  • duplicate_reads   — blocks 3rd+ read of the same file"
 echo "  • retry_loop        — blocks identical tool calls repeated 3×"
-echo "  • auto_compact      — triggers /compact every 25 steps automatically"
-echo "  • context_pressure  — warns at 30 steps, forces handoff at 50"
-echo "  • failed_tools      — catches failures and forces recovery plan"
-echo "  • session_summary   — writes handoff to ~/.claude/last-session.md on Stop"
-echo ""
-echo "  Note: autoCompact is set to false — auto_compact.py manages it instead."
 echo ""
 echo "  Run before each new session:"
 echo "  $ ~/.claude/clear-logs.sh"
-echo ""
-echo "  Resume a previous session:"
-echo "  $ cat ~/.claude/last-session.md"
 echo ""
 echo "  To uninstall:"
 echo "  $ bash uninstall.sh"
