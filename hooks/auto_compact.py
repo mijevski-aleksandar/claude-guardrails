@@ -59,18 +59,11 @@ if steps_since_last >= COMPACT_AT and steps > 0:
     count = compact_state["compact_count"]
 
     sys.stderr.write(
-        f"[guardrail: auto_compact] COMPACT TRIGGERED at step {steps} "
+        f"[guardrail: auto_compact] COMPACT SUGGESTED at step {steps} "
         f"(compaction #{count} this session).\n"
         f"\n"
-        f"Context is getting long and should be compacted now to recover window space.\n"
-        f"\n"
-        f"You MUST do the following before continuing:\n"
-        f"1. Run /compact to compress the conversation history.\n"
-        f"2. After compaction completes, confirm it succeeded.\n"
-        f"3. Then resume what you were about to do.\n"
-        f"\n"
-        f"Do NOT proceed with the current tool call until /compact has been run."
+        f"Context is getting long. Consider running /compact to recover window space.\n"
     )
-    sys.exit(2)  # block the tool call, force /compact first
+    sys.exit(0)  # warn only, don't block
 
 sys.exit(0)
