@@ -16,7 +16,7 @@ echo "   Claude Code Guardrails — Uninstaller"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-HOOK_FILES=("duplicate_reads.py" "retry_loop.py" "compaction_reset.py")
+HOOK_FILES=("duplicate_reads.py" "retry_loop.py" "context_pressure.py" "auto_compact.py" "failed_tools.py" "compaction_reset.py" "post_compact.py")
 
 for hook in "${HOOK_FILES[@]}"; do
   if [ -f "$HOOKS_DIR/$hook" ]; then
@@ -48,7 +48,7 @@ EOF
 fi
 
 # Clear temp logs
-rm -f /tmp/claude_read_log.json /tmp/claude_retry_log.json
+rm -f /tmp/claude_read_log.json /tmp/claude_retry_log.json /tmp/claude_step_count.json /tmp/claude_compact_log.json /tmp/claude_fail_log.json /tmp/claude_summary_written.flag
 echo -e "${GREEN}✓ Temp logs cleared${NC}"
 
 echo ""

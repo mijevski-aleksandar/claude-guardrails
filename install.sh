@@ -29,12 +29,22 @@ echo -e "${GREEN}✓ Python 3 found$(python3 --version | awk '{print " ("$2")"}'
 mkdir -p "$HOOKS_DIR"
 echo -e "${GREEN}✓ Hooks directory ready: $HOOKS_DIR${NC}"
 
-# Copy hooks
-cp "$REPO_DIR/hooks/duplicate_reads.py" "$HOOKS_DIR/"
-cp "$REPO_DIR/hooks/retry_loop.py" "$HOOKS_DIR/"
-cp "$REPO_DIR/hooks/compaction_reset.py" "$HOOKS_DIR/"
-chmod +x "$HOOKS_DIR/duplicate_reads.py" "$HOOKS_DIR/retry_loop.py" "$HOOKS_DIR/compaction_reset.py"
-echo -e "${GREEN}✓ Hooks installed${NC}"
+# Copy all hooks
+HOOK_FILES=(
+  duplicate_reads.py
+  retry_loop.py
+  context_pressure.py
+  auto_compact.py
+  failed_tools.py
+  compaction_reset.py
+  post_compact.py
+)
+
+for hook in "${HOOK_FILES[@]}"; do
+  cp "$REPO_DIR/hooks/$hook" "$HOOKS_DIR/"
+done
+chmod +x "${HOOK_FILES[@]/#/$HOOKS_DIR/}"
+echo -e "${GREEN}✓ Hooks installed (${#HOOK_FILES[@]} files)${NC}"
 
 # Handle existing settings.json
 if [ -f "$SETTINGS_FILE" ]; then
@@ -58,11 +68,28 @@ for event, hook_list in new_hooks.get("hooks", {}).items():
     if event not in existing_hooks:
         existing_hooks[event] = hook_list
     else:
-        # Append if not already present
-        existing_matchers = [h.get("matcher") for h in existing_hooks[event]]
+        # Merge hook commands, avoiding duplicates
+        existing_commands = set()
+        for group in existing_hooks[event]:
+            for h in group.get("hooks", []):
+                existing_commands.add(h.get("command", ""))
+
         for item in hook_list:
-            if item.get("matcher") not in existing_matchers:
-                existing_hooks[event].append(item)
+            new_commands = [
+                h for h in item.get("hooks", [])
+                if h.get("command", "") not in existing_commands
+            ]
+            if new_commands:
+                # Add to existing matcher group or create new one
+                matcher = item.get("matcher")
+                matched = False
+                for group in existing_hooks[event]:
+                    if group.get("matcher") == matcher:
+                        group["hooks"].extend(new_commands)
+                        matched = True
+                        break
+                if not matched:
+                    existing_hooks[event].append(item)
 
 existing["hooks"] = existing_hooks
 
@@ -83,9 +110,21 @@ echo -e "${GREEN}  Installation complete!${NC}"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "  Hooks installed:"
+echo ""
+echo "  PreToolUse (fires before every tool call):"
 echo "  • duplicate_reads    — warns on 2nd read, blocks 3rd+ (allows re-reads if file changed)"
 echo "  • retry_loop         — warns on 2nd identical call, blocks 3rd+"
-echo "  • compaction_reset   — resets counters after context compaction"
+echo "  • context_pressure   — warns at step 30, critical warning at step 50"
+echo "  • auto_compact       — suggests /compact every 25 steps"
+echo ""
+echo "  PostToolUse (fires after every tool call):"
+echo "  • failed_tools       — detects failures, escalates after 3"
+echo ""
+echo "  PreCompact (fires before context compaction):"
+echo "  • compaction_reset   — resets all counters after compaction"
+echo ""
+echo "  PostCompact (fires after context compaction):"
+echo "  • post_compact       — reminds Claude to re-read plan/task files"
 echo ""
 echo "  State auto-resets per session — no manual cleanup needed."
 echo ""

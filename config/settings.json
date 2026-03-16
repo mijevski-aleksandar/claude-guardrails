@@ -11,6 +11,25 @@
           {
             "type": "command",
             "command": "python3 ~/.claude/hooks/retry_loop.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/hooks/context_pressure.py"
+          },
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/hooks/auto_compact.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/hooks/failed_tools.py"
           }
         ]
       }
@@ -21,6 +40,16 @@
           {
             "type": "command",
             "command": "python3 ~/.claude/hooks/compaction_reset.py"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/hooks/post_compact.py"
           }
         ]
       }
