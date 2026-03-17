@@ -2,18 +2,20 @@
 """
 Hook: duplicate_reads.py
 Fires: PreToolUse on Read calls
-Purpose: Block wasteful re-reads of unchanged files while allowing legitimate ones.
+Purpose: Warn about repeated reads of unchanged files, but NEVER block them.
+         Blocking reads degrades output quality because Claude's memory of
+         file contents degrades after compaction or long sessions. It's always
+         better to let Claude re-read than to force it to guess.
 
 Smart behaviors:
   - Auto-resets counters when session changes (no manual clear-logs.sh needed)
   - Allows re-reads if the file was modified on disk since the last read
-  - Warns on 2nd read (non-blocking), blocks on 3rd+ read
-  - Tracks file mtime to detect genuine changes
+  - Warns on 2nd+ read with escalating guidance (never blocks)
+  - Suggests using Grep for targeted lookups or reading specific line ranges
 
 Config:
-  MAX_READS    — block after this many reads of the same unchanged file (default: 3)
-  WARN_AT      — warn (non-blocking) at this many reads (default: 2)
-  READ_LOG     — path to state file
+  WARN_AT  — warn at this many reads of unchanged file (default: 2)
+  READ_LOG — path to state file
 """
 
 import json
@@ -21,8 +23,7 @@ import sys
 import os
 
 READ_LOG = "/tmp/claude_read_log.json"
-MAX_READS = 3   # block on 3rd read of unchanged file
-WARN_AT = 2     # warn on 2nd read (non-blocking)
+WARN_AT = 2  # warn starting at 2nd read (non-blocking)
 
 data = json.load(sys.stdin)
 
@@ -61,15 +62,6 @@ if file_changed:
 
 count = entry["count"]
 
-if count >= MAX_READS:
-    sys.stderr.write(
-        f"DUPLICATE READ BLOCKED: You have read '{os.path.basename(file_path)}' "
-        f"{count} times and it has not changed on disk.\n"
-        f"Use the content you already have. If you need something specific, "
-        f"state what it is and search with Grep instead."
-    )
-    sys.exit(2)
-
 # Record this read
 entry["count"] = count + 1
 entry["last_mtime"] = current_mtime
@@ -79,13 +71,17 @@ state["reads"] = reads
 with open(READ_LOG, "w") as f:
     json.dump(state, f)
 
-if count + 1 == WARN_AT:
-    # Warn but don't block
+# Warn but NEVER block — Claude's memory of file contents is unreliable
+# after compaction, so re-reading is always safer than guessing
+if count + 1 >= WARN_AT:
+    basename = os.path.basename(file_path)
+    nth = count + 1
+    suffix = {2: "nd", 3: "rd"}.get(nth, "th")
     sys.stderr.write(
-        f"[guardrail] You are reading '{os.path.basename(file_path)}' for the "
-        f"{count + 1}{'nd' if count + 1 == 2 else 'th'} time. "
-        f"Consider using Grep for targeted lookups instead of full re-reads."
+        f"[guardrail] You are reading '{basename}' for the {nth}{suffix} time "
+        f"and it has not changed on disk. "
+        f"If you need a specific section, use Grep or read with offset/limit "
+        f"instead of the full file."
     )
-    sys.exit(0)
 
-sys.exit(0)
+sys.exit(0)  # NEVER block reads — always exit 0
