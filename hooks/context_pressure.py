@@ -16,7 +16,18 @@ STEP_LOG = "/tmp/claude_step_count.json"
 WARN_AT = 30    # warn Claude to wrap up
 STOP_AT = 50    # critical warning (warn-only, does not block)
 
+# System/lifecycle tools that should not count as steps
+SKIP_TOOLS = {
+    "ExitPlanMode", "EnterPlanMode", "ExitWorktree", "EnterWorktree",
+    "TodoWrite", "AskUserQuestion", "Skill", "ToolSearch",
+    "Agent", "SendMessage", "NotebookEdit",
+}
+
 data = json.load(sys.stdin)
+
+# Don't count lifecycle tools as steps
+if data.get("tool_name", "") in SKIP_TOOLS:
+    sys.exit(0)
 
 try:
     with open(STEP_LOG) as f:

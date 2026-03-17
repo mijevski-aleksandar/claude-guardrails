@@ -20,6 +20,17 @@ STEP_LOG    = "/tmp/claude_step_count.json"
 COMPACT_LOG = "/tmp/claude_compact_log.json"
 COMPACT_AT  = 25   # suggest /compact every N steps
 
+# System/lifecycle tools — skip silently
+SKIP_TOOLS = {
+    "ExitPlanMode", "EnterPlanMode", "ExitWorktree", "EnterWorktree",
+    "TodoWrite", "AskUserQuestion", "Skill", "ToolSearch",
+    "Agent", "SendMessage", "NotebookEdit",
+}
+
+data_raw = json.load(sys.stdin)
+if data_raw.get("tool_name", "") in SKIP_TOOLS:
+    sys.exit(0)
+
 # ── Load step count (shared with context_pressure.py) ──────────────────────
 try:
     with open(STEP_LOG) as f:

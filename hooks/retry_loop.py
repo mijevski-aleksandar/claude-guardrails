@@ -26,8 +26,12 @@ RETRY_LOG = "/tmp/claude_retry_log.json"
 MAX_IDENTICAL = 3   # block on 3rd identical call
 WARN_AT = 2         # warn on 2nd
 
-# Tools that are safe to repeat or handled elsewhere
-SKIP_TOOLS = {"Read", "Grep", "Glob", "Skill", "ToolSearch"}
+# Tools that are safe to repeat, handled elsewhere, or are lifecycle/system tools
+SKIP_TOOLS = {
+    "Read", "Grep", "Glob", "Skill", "ToolSearch",
+    "ExitPlanMode", "EnterPlanMode", "ExitWorktree", "EnterWorktree",
+    "TodoWrite", "AskUserQuestion", "Agent", "SendMessage", "NotebookEdit",
+}
 
 data = json.load(sys.stdin)
 
