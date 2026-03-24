@@ -53,6 +53,7 @@ files_written  = []   # (path, tool) tuples
 files_read     = defaultdict(int)
 last_tool_calls = []  # last N tool calls for context
 bash_commands  = []   # last bash commands
+assistant_texts = []  # last assistant text blocks for key findings
 
 if session_file:
     try:
@@ -70,7 +71,17 @@ if session_file:
 
             content = obj.get("message", {}).get("content", [])
             for block in content:
-                if not isinstance(block, dict) or block.get("type") != "tool_use":
+                if not isinstance(block, dict):
+                    continue
+
+                # Capture assistant text blocks for key findings
+                if block.get("type") == "text":
+                    text = block.get("text", "").strip()
+                    if len(text) > 30:  # skip trivial fragments
+                        assistant_texts.append(text[:200])
+                    continue
+
+                if block.get("type") != "tool_use":
                     continue
 
                 tname  = block.get("name", "")
@@ -118,6 +129,8 @@ handoff = {
     "last_tool_calls": last_tool_calls[-5:],  # last 5 tool calls
     "last_bash":       bash_commands[-3:],    # last 3 bash commands
     "total_tool_calls": len(last_tool_calls),
+    "key_findings":    assistant_texts[-3:],  # last 3 substantive assistant texts
+    "do_not_reread":   [p for p, c in files_read.items() if c >= 2],  # files read 2+ times
 }
 
 with open(HANDOFF_FILE, "w") as f:

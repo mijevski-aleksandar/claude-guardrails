@@ -45,6 +45,18 @@ if handoff:
     if last_bash:
         parts.append(f"LAST BASH: {last_bash[-1][:100]}")
 
+    findings = handoff.get("key_findings", [])
+    if findings:
+        parts.append(f"KEY FINDINGS BEFORE COMPACT: {' | '.join(findings)}")
+
+    do_not_reread = handoff.get("do_not_reread", [])
+    if do_not_reread:
+        basenames = [os.path.basename(p) for p in do_not_reread[:5]]
+        parts.append(
+            f"WELL-UNDERSTOOD FILES (do NOT re-read unless you need exact content for an Edit): "
+            f"{', '.join(basenames)}"
+        )
+
     parts.append(
         f"Re-read modified files before continuing. "
         f"Do NOT re-explore the codebase from scratch — pick up where you left off."

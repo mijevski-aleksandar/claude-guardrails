@@ -6,15 +6,15 @@ Purpose: Track step count and warn Claude when sessions get long.
          Encourages concise behavior and session splitting for complex tasks.
 
 Config:
-  WARN_AT  — step count at which to start warning (default: 30)
-  STOP_AT  — step count for critical warning (default: 50, warn-only)
+  WARN_AT  — step count at which to start warning (default: 50)
+  STOP_AT  — step count for critical warning (default: 80, warn-only)
 """
 
 import json, sys, os
 
 STEP_LOG = "/tmp/claude_step_count.json"
-WARN_AT = 30    # warn Claude to wrap up
-STOP_AT = 50    # critical warning (warn-only, does not block)
+WARN_AT = 50    # warn Claude to wrap up
+STOP_AT = 80    # critical warning (warn-only, does not block)
 
 # System/lifecycle tools that should not count as steps
 SKIP_TOOLS = {

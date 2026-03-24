@@ -29,9 +29,12 @@ WARN_AT = 2         # warn on 2nd
 # Tools that are safe to repeat, handled elsewhere, or are lifecycle/system tools
 SKIP_TOOLS = {
     "Read", "Grep", "Glob", "Skill", "ToolSearch",
-    "ExitPlanMode", "EnterPlanMode", "ExitWorktree", "EnterWorktree",
+    "EnterPlanMode", "ExitWorktree", "EnterWorktree",
     "TodoWrite", "AskUserQuestion", "Agent", "SendMessage", "NotebookEdit",
 }
+
+# ExitPlanMode gets a stricter limit — never legitimate to call it twice
+EPM_MAX = 2
 
 data = json.load(sys.stdin)
 
@@ -69,7 +72,10 @@ fingerprint = hashlib.md5(
 
 count = calls.get(fingerprint, 0)
 
-if count >= MAX_IDENTICAL:
+# ExitPlanMode: stricter limit (block on 2nd call)
+effective_max = EPM_MAX if tool_name == "ExitPlanMode" else MAX_IDENTICAL
+
+if count >= effective_max:
     sys.stderr.write(
         f"RETRY LOOP DETECTED: You have attempted the same '{tool_name}' call "
         f"{count} times with identical inputs.\n"
