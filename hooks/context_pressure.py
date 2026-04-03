@@ -29,11 +29,17 @@ data = json.load(sys.stdin)
 if data.get("tool_name", "") in SKIP_TOOLS:
     sys.exit(0)
 
+session_id = data.get("session_id", "")
+
 try:
     with open(STEP_LOG) as f:
         state = json.load(f)
 except (FileNotFoundError, json.JSONDecodeError):
-    state = {"steps": 0}
+    state = {"session_id": "", "steps": 0}
+
+# Auto-reset if session changed
+if state.get("session_id") != session_id:
+    state = {"session_id": session_id, "steps": 0}
 
 state["steps"] += 1
 steps = state["steps"]

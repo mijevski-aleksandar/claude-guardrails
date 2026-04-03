@@ -29,6 +29,7 @@ data = json.load(sys.stdin)
 
 tool_name = data.get("tool_name", "")
 tool_response = data.get("tool_response", {})
+session_id = data.get("session_id", "")
 
 # Skip system/lifecycle tools entirely
 if tool_name in SKIP_TOOLS:
@@ -57,7 +58,11 @@ try:
     with open(FAIL_LOG) as f:
         log = json.load(f)
 except (FileNotFoundError, json.JSONDecodeError):
-    log = {"count": 0, "failures": []}
+    log = {"session_id": "", "count": 0, "failures": []}
+
+# Auto-reset if session changed
+if log.get("session_id") != session_id:
+    log = {"session_id": session_id, "count": 0, "failures": []}
 
 log["count"] += 1
 

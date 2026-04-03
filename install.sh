@@ -37,6 +37,7 @@ HOOK_FILES=(
   auto_compact.py
   failed_tools.py
   compaction_reset.py
+  session_summary.py
   post_compact.py
 )
 
@@ -121,7 +122,8 @@ echo "  PostToolUse (fires after every tool call):"
 echo "  • failed_tools       — detects failures, escalates after 3"
 echo ""
 echo "  PreCompact (fires before context compaction):"
-echo "  • compaction_reset   — resets all counters after compaction"
+echo "  • compaction_reset   — resets all counters before compaction"
+echo "  • session_summary    — prompts Claude to write a handoff summary"
 echo ""
 echo "  PostCompact (fires after context compaction):"
 echo "  • post_compact       — reminds Claude to re-read plan/task files"

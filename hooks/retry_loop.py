@@ -33,8 +33,11 @@ SKIP_TOOLS = {
     "TodoWrite", "AskUserQuestion", "Agent", "SendMessage", "NotebookEdit",
 }
 
-# ExitPlanMode gets a stricter limit — never legitimate to call it twice
-EPM_MAX = 2
+# ExitPlanMode is tracked by invocation count (not fingerprint) because Claude
+# evades fingerprint detection by editing the plan slightly between attempts.
+# The EPM_MAX limit applies to total calls regardless of content.
+EPM_MAX = 3   # block on 3rd ExitPlanMode call in a session
+EPM_WARN = 2  # warn on 2nd
 
 data = json.load(sys.stdin)
 
@@ -51,12 +54,39 @@ try:
     with open(RETRY_LOG) as f:
         state = json.load(f)
 except (FileNotFoundError, json.JSONDecodeError):
-    state = {"session_id": "", "calls": {}}
+    state = {"session_id": "", "calls": {}, "epm_count": 0}
 
 # Auto-reset if session changed
 if state.get("session_id") != session_id:
-    state = {"session_id": session_id, "calls": {}}
+    state = {"session_id": session_id, "calls": {}, "epm_count": 0}
 
+# ── ExitPlanMode: count-based tracking (ignores content/fingerprint) ────────
+if tool_name == "ExitPlanMode":
+    epm_count = state.get("epm_count", 0) + 1
+    state["epm_count"] = epm_count
+
+    with open(RETRY_LOG, "w") as f:
+        json.dump(state, f)
+
+    if epm_count >= EPM_MAX:
+        sys.stderr.write(
+            f"RETRY LOOP DETECTED: You have called ExitPlanMode {epm_count} times "
+            f"this session. The user keeps rejecting your plan.\n"
+            f"STOP and use AskUserQuestion to clarify what the user wants changed "
+            f"before attempting ExitPlanMode again."
+        )
+        sys.exit(2)
+    elif epm_count >= EPM_WARN:
+        sys.stderr.write(
+            f"[guardrail] ExitPlanMode called {epm_count} times this session. "
+            f"If the user rejected your plan, ask what needs to change before "
+            f"re-submitting."
+        )
+        sys.exit(0)
+
+    sys.exit(0)
+
+# ── All other tools: fingerprint-based tracking ─────────────────────────────
 calls = state.get("calls", {})
 
 # Create fingerprint — for Bash, normalize by ignoring the description field
@@ -72,10 +102,7 @@ fingerprint = hashlib.md5(
 
 count = calls.get(fingerprint, 0)
 
-# ExitPlanMode: stricter limit (block on 2nd call)
-effective_max = EPM_MAX if tool_name == "ExitPlanMode" else MAX_IDENTICAL
-
-if count >= effective_max:
+if count >= MAX_IDENTICAL:
     sys.stderr.write(
         f"RETRY LOOP DETECTED: You have attempted the same '{tool_name}' call "
         f"{count} times with identical inputs.\n"
