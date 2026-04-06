@@ -36,8 +36,8 @@ SKIP_TOOLS = {
 # ExitPlanMode is tracked by invocation count (not fingerprint) because Claude
 # evades fingerprint detection by editing the plan slightly between attempts.
 # The EPM_MAX limit applies to total calls regardless of content.
-EPM_MAX = 3   # block on 3rd ExitPlanMode call in a session
-EPM_WARN = 2  # warn on 2nd
+EPM_MAX = 2   # block on 2nd ExitPlanMode call in a session
+EPM_WARN = 1  # warn on 1st
 
 data = json.load(sys.stdin)
 
