@@ -34,7 +34,6 @@ HOOK_FILES=(
   duplicate_reads.py
   retry_loop.py
   context_pressure.py
-  auto_compact.py
   failed_tools.py
   compaction_reset.py
   session_summary.py
@@ -115,8 +114,7 @@ echo ""
 echo "  PreToolUse (fires before every tool call):"
 echo "  • duplicate_reads    — warns on 2nd read, blocks 3rd+ (allows re-reads if file changed)"
 echo "  • retry_loop         — warns on 2nd identical call, blocks 3rd+"
-echo "  • context_pressure   — warns at step 30, critical warning at step 50"
-echo "  • auto_compact       — suggests /compact every 25 steps"
+echo "  • context_pressure   — warns at step 50, critical warning at step 80"
 echo ""
 echo "  PostToolUse (fires after every tool call):"
 echo "  • failed_tools       — detects failures, escalates after 3"

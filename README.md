@@ -42,7 +42,6 @@ That's it. No manual cleanup needed between sessions — state auto-resets.
     ├── duplicate_reads.py    (PreToolUse)
     ├── retry_loop.py         (PreToolUse)
     ├── context_pressure.py   (PreToolUse)
-    ├── auto_compact.py       (PreToolUse)
     ├── failed_tools.py       (PostToolUse)
     ├── compaction_reset.py   (PreCompact)
     ├── session_summary.py    (PreCompact)
@@ -89,16 +88,6 @@ Smart behaviors:
 This hook tracks step count per session and applies increasing pressure to keep sessions focused. Both thresholds are warn-only — Claude is never hard-blocked. Counters auto-reset when the session changes.
 
 **Config:** Edit `WARN_AT` (default: 50) and `STOP_AT` (default: 80) in the script
-
----
-
-### `auto_compact.py`
-**Fires:** `PreToolUse` on every tool call
-**Suggests:** `/compact` when the session JSONL file reaches ~1.5 MB (~70% context capacity)
-
-Proactive compaction recovers ~16% more context window compared to waiting for Claude Code's built-in autocompact (which triggers reactively at ~95% capacity). Requires 200KB+ growth since last suggestion to avoid repeated firing at the threshold boundary.
-
-**Config:** Edit `COMPACT_THRESHOLD_BYTES` (default: 1,500,000) in the script
 
 ---
 
@@ -180,9 +169,6 @@ EPM_WARN = 2        # warn ExitPlanMode at this count
 # context_pressure.py
 WARN_AT = 50    # warn to be concise
 STOP_AT = 80    # critical warning
-
-# auto_compact.py
-COMPACT_THRESHOLD_BYTES = 1_500_000  # ~70% context capacity
 
 # failed_tools.py
 MAX_FAILURES = 3  # escalate after this many failures
