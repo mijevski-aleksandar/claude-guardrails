@@ -36,6 +36,14 @@ list_modules() {
   done
 }
 
+backup_if_real_file() {
+  local target="$1"
+  if [ -e "$target" ] && [ ! -L "$target" ]; then
+    mv "$target" "$target.bak"
+    echo -e "${YELLOW}! Existing file backed up to $target.bak${NC}"
+  fi
+}
+
 install_module() {
   local name="$1"
   local module_dir="$MODULES_DIR/$name"
@@ -52,7 +60,8 @@ install_module() {
 
   if [ "$requires_shared" = "True" ]; then
     mkdir -p "$CLAUDE_DIR/hooks"
-    if [ ! -e "$CLAUDE_DIR/hooks/state_paths.py" ]; then
+    if [ ! -L "$CLAUDE_DIR/hooks/state_paths.py" ]; then
+      backup_if_real_file "$CLAUDE_DIR/hooks/state_paths.py"
       ln -sf "$REPO_DIR/shared/state_paths.py" "$CLAUDE_DIR/hooks/state_paths.py"
       echo -e "${GREEN}✓ Linked shared/state_paths.py${NC}"
     fi
@@ -69,6 +78,7 @@ for src_rel, target in module_json.get('install', {}).items():
     target_expanded="${target/#\~/$HOME}"
     target_dir=$(dirname "$target_expanded")
     mkdir -p "$target_dir"
+    backup_if_real_file "$target_expanded"
     ln -sf "$src_abs" "$target_expanded"
     echo -e "${GREEN}✓ Linked${NC} $target -> $src_abs"
   done
