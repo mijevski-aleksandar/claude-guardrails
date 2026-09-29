@@ -1,0 +1,10 @@
+{
+  "name": "subagent-fanout-guard",
+  "description": "Cost control against runaway parallel subagent spawns — warns at 3, blocks at 6 in-flight",
+  "type": "hook",
+  "hook_events": ["PreToolUse", "SubagentStart", "SubagentStop"],
+  "install": {
+    "hook.py": "~/.claude/hooks/subagent_fanout_guard.py"
+  },
+  "requires_shared": true
+}

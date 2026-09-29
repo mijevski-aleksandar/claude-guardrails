@@ -1,0 +1,10 @@
+{
+  "name": "handoff-before-gap",
+  "description": "Injects a brief recap prompt when resuming a session after a 30+ minute idle gap, so context isn't lost between turns",
+  "type": "hook",
+  "hook_events": ["Stop", "UserPromptSubmit"],
+  "install": {
+    "hook.py": "~/.claude/hooks/handoff_before_gap.py"
+  },
+  "requires_shared": true
+}
