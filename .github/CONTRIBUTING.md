@@ -4,7 +4,16 @@ Thanks for your interest in contributing! This project is intentionally simple �
 
 ## Adding a New Hook
 
-### 1. Create your hook script in `hooks/`
+Each feature is a self-contained module under `modules/<name>/`:
+
+```
+modules/your-hook/
+├── hook.py                    # the script
+├── module.json                # what gets symlinked where
+└── settings.fragment.json     # the slice of settings.json to merge
+```
+
+### 1. Create `modules/<name>/hook.py`
 
 Every hook receives a JSON payload via stdin and must exit with:
 - `0` — allow the action to proceed
@@ -27,9 +36,29 @@ sys.stderr.write("Your message to Claude explaining why this was blocked.")
 sys.exit(2)  # block
 ```
 
-### 2. Register it in `config/settings.json`
+If the hook needs state, import the shared per-session helper instead of using a global file (see `modules/retry-loop/hook.py` for the import pattern; use `os.path.realpath(__file__)`, not `abspath`, because the installed file is a symlink):
 
-Add it under the appropriate event:
+```python
+from state_paths import get_state_path
+STATE = get_state_path("your_hook", data.get("session_id", ""))
+```
+
+### 2. Describe it in `module.json` and `settings.fragment.json`
+
+`module.json`:
+
+```json
+{
+  "name": "your-hook",
+  "description": "One line on what it does",
+  "type": "hook",
+  "hook_events": ["PreToolUse"],
+  "install": { "hook.py": "~/.claude/hooks/your_hook.py" },
+  "requires_shared": true
+}
+```
+
+`settings.fragment.json` (merged into `~/.claude/settings.json` on install, removed on uninstall):
 
 ```json
 {
@@ -88,7 +117,8 @@ Open a PR or issue to share your idea!
 ## Guidelines
 
 - Keep hooks focused — one concern per file
-- Use `/tmp/claude_yourname_*.json` for any session state files
+- Keep state per session via `shared/state_paths.py`; never a single global file (concurrent sessions would overwrite each other)
+- Test `bash install.sh --install your-hook` and `bash uninstall.sh --uninstall your-hook` against a scratch `HOME` before opening a PR
 - Always handle `FileNotFoundError` and `json.JSONDecodeError` when reading log files
 - Write clear, actionable messages to stderr — Claude reads them and acts on them
 - Add a docstring at the top of every hook explaining what it does and what config options exist

@@ -30,6 +30,8 @@ bash uninstall.sh --uninstall retry-loop
 bash uninstall.sh --uninstall all
 ```
 
+If a file already exists at an install target (for example your own `~/.claude/hooks/duplicate_reads.py`), the installer moves it to `<name>.bak` before linking. Re-running an install is safe and creates no further backups. Requires `python3` and `bash`.
+
 ---
 
 ## Available modules
@@ -125,6 +127,10 @@ Replaces the intent of an earlier `PreCompact`-based handoff design that broke s
 ## `pr-review`
 
 `/pr-review <PR_NUMBER>` — fans out three parallel reviewer agents (`pr-review-logic`, `pr-review-security`, `pr-review-style`) against the PR diff, then a verifier agent (`pr-verify-incoming`) grades every finding against the actual code before anything gets posted. See `modules/pr-review/command.md` and `modules/pr-review/agents/` for the full agent prompts.
+
+**Requirements:** run it inside a git checkout of the repo being reviewed, with the `gh` CLI authenticated (it uses `gh pr view`, `gh pr diff`, `gh api`) and `git worktree` available (the PR head is checked out into a temporary worktree and removed afterwards). Optional: a Shortcut MCP server (the command extracts a Shortcut story ID from the PR body and, if the MCP tool is available, loads the acceptance criteria; otherwise it records "unavailable" and carries on), plus `.claude/REVIEW.md`, `CLAUDE.md` and project skills in the reviewed repo, which are passed to the reviewers as repo-specific rules.
+
+**Adapt before using elsewhere:** these prompts were written for the author's own codebases. `pr-review-logic.md` names specific apps (`slice_ops`, `phone`) and an audit-log mixin, and the command assumes Shortcut for tickets. Replace those with your own conventions.
 
 Designed to minimize false positives reaching a real PR: findings are only surfaced as ready-to-post comments after independent verification, with tiered rigor by severity and deduplication against prior reviewer comments.
 
