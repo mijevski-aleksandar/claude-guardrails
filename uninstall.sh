@@ -1,58 +1,84 @@
 #!/usr/bin/env bash
 set -e
 
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_DIR="$HOME/.claude"
-HOOKS_DIR="$CLAUDE_DIR/hooks"
-SETTINGS_FILE="$CLAUDE_DIR/settings.json"
-BACKUP_FILE="$CLAUDE_DIR/settings.backup.json"
+MODULES_DIR="$REPO_DIR/modules"
 
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m'
 
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "   Claude Code Guardrails — Uninstaller"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
+usage() {
+  echo ""
+  echo "Claude Code Guardrails — Modular Uninstaller"
+  echo ""
+  echo "Usage:"
+  echo "  bash uninstall.sh --uninstall <module>      Remove one module by name"
+  echo "  bash uninstall.sh --uninstall all            Remove every module"
+  echo ""
+}
 
-HOOK_FILES=("duplicate_reads.py" "retry_loop.py" "context_pressure.py" "auto_compact.py" "failed_tools.py" "compaction_reset.py" "post_compact.py")
+uninstall_module() {
+  local name="$1"
+  local module_dir="$MODULES_DIR/$name"
 
-for hook in "${HOOK_FILES[@]}"; do
-  if [ -f "$HOOKS_DIR/$hook" ]; then
-    rm "$HOOKS_DIR/$hook"
-    echo -e "${GREEN}✓ Removed $hook${NC}"
+  if [ ! -d "$module_dir" ]; then
+    echo -e "${RED}✗ Unknown module: $name${NC}"
+    exit 1
   fi
-done
 
-# Restore backup settings if it exists
-if [ -f "$BACKUP_FILE" ]; then
-  cp "$BACKUP_FILE" "$SETTINGS_FILE"
-  rm "$BACKUP_FILE"
-  echo -e "${GREEN}✓ Restored original settings.json from backup${NC}"
-else
-  # Remove hooks section from settings.json
-  python3 - <<EOF
+  local module_json="$module_dir/module.json"
+
+  # Remove symlinks this module created
+  python3 -c "
 import json
-try:
-    with open("$SETTINGS_FILE") as f:
-        settings = json.load(f)
-    settings.pop("hooks", None)
-    with open("$SETTINGS_FILE", "w") as f:
-        json.dump(settings, f, indent=2)
-    print("Removed hooks from settings.json")
-except:
-    print("settings.json not found or already clean")
-EOF
-  echo -e "${GREEN}✓ Hooks removed from settings.json${NC}"
-fi
+module_json = json.load(open('$module_json'))
+for src_rel, target in module_json.get('install', {}).items():
+    print(target)
+" | while read -r target; do
+    target_expanded="${target/#\~/$HOME}"
+    if [ -L "$target_expanded" ]; then
+      rm "$target_expanded"
+      echo -e "${GREEN}✓ Removed symlink${NC} $target"
+    fi
+  done
 
-# Clear temp logs
-rm -f /tmp/claude_read_log.json /tmp/claude_retry_log.json /tmp/claude_step_count.json /tmp/claude_compact_log.json /tmp/claude_fail_log.json /tmp/claude_summary_written.flag
-echo -e "${GREEN}✓ Temp logs cleared${NC}"
+  # Unmerge settings fragment, if any
+  local fragment="$module_dir/settings.fragment.json"
+  if [ -f "$fragment" ]; then
+    python3 "$REPO_DIR/lib/settings_merge.py" unmerge "$fragment"
+    echo -e "${GREEN}✓ Unmerged settings for $name${NC}"
+  fi
 
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo -e "${GREEN}  Uninstall complete.${NC}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
+  echo -e "${GREEN}✓ Uninstalled: $name${NC}"
+}
+
+uninstall_all() {
+  for dir in "$MODULES_DIR"/*/; do
+    uninstall_module "$(basename "$dir")"
+    echo ""
+  done
+  # Only remove the shared symlink once nothing references it
+  if [ -L "$CLAUDE_DIR/hooks/state_paths.py" ]; then
+    rm "$CLAUDE_DIR/hooks/state_paths.py"
+    echo -e "${GREEN}✓ Removed shared/state_paths.py link${NC}"
+  fi
+}
+
+case "$1" in
+  --uninstall)
+    if [ -z "$2" ]; then
+      echo -e "${RED}✗ Missing module name. Usage: bash uninstall.sh --uninstall <module|all>${NC}"
+      exit 1
+    fi
+    if [ "$2" = "all" ]; then
+      uninstall_all
+    else
+      uninstall_module "$2"
+    fi
+    ;;
+  *)
+    usage
+    ;;
+esac
