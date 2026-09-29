@@ -1,0 +1,14 @@
+{
+  "name": "pr-review",
+  "description": "Full PR review — three parallel focused agents (logic, security, style) followed by a verifier in the same session. Usage: /pr-review <PR_NUMBER>",
+  "type": "command+agents",
+  "hook_events": [],
+  "install": {
+    "command.md": "~/.claude/commands/pr-review.md",
+    "agents/pr-review-logic.md": "~/.claude/agents/pr-review-logic.md",
+    "agents/pr-review-security.md": "~/.claude/agents/pr-review-security.md",
+    "agents/pr-review-style.md": "~/.claude/agents/pr-review-style.md",
+    "agents/pr-verify-incoming.md": "~/.claude/agents/pr-verify-incoming.md"
+  },
+  "requires_shared": false
+}
