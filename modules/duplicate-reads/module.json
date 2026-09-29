@@ -1,0 +1,10 @@
+{
+  "name": "duplicate-reads",
+  "description": "Blocks re-reads of the same bytes from an unchanged file (warns on 2nd, blocks on 3rd overlapping read)",
+  "type": "hook",
+  "hook_events": ["PreToolUse"],
+  "install": {
+    "hook.py": "~/.claude/hooks/duplicate_reads.py"
+  },
+  "requires_shared": true
+}

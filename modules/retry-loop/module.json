@@ -1,0 +1,10 @@
+{
+  "name": "retry-loop",
+  "description": "Detects and stops retry loops — exact and near-identical tool calls (warns on 1st repeat, blocks on 2nd)",
+  "type": "hook",
+  "hook_events": ["PreToolUse"],
+  "install": {
+    "hook.py": "~/.claude/hooks/retry_loop.py"
+  },
+  "requires_shared": true
+}

@@ -1,0 +1,10 @@
+{
+  "name": "failed-tools",
+  "description": "Detects tool failures via structured signals (is_error, exit code, tool_use_error) and escalates after repeated failures",
+  "type": "hook",
+  "hook_events": ["PostToolUse"],
+  "install": {
+    "hook.py": "~/.claude/hooks/failed_tools.py"
+  },
+  "requires_shared": true
+}

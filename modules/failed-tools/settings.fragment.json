@@ -1,0 +1,10 @@
+{
+  "PostToolUse": [
+    {
+      "matcher": ".*",
+      "hooks": [
+        { "type": "command", "command": "python3 ~/.claude/hooks/failed_tools.py" }
+      ]
+    }
+  ]
+}

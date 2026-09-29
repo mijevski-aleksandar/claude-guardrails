@@ -1,0 +1,10 @@
+{
+  "PreToolUse": [
+    {
+      "matcher": ".*",
+      "hooks": [
+        { "type": "command", "command": "python3 ~/.claude/hooks/retry_loop.py" }
+      ]
+    }
+  ]
+}
