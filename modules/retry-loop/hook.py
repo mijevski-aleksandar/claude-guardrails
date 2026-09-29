@@ -103,10 +103,10 @@ fingerprint = hashlib.md5(
 
 count = calls.get(fingerprint, 0)
 
-if count >= MAX_IDENTICAL:
+if count + 1 >= MAX_IDENTICAL:
     sys.stderr.write(
         f"RETRY LOOP DETECTED: You have attempted the same '{tool_name}' call "
-        f"{count} times with identical inputs.\n"
+        f"{count} time(s) already with identical inputs.\n"
         f"STOP and either:\n"
         f"1. Try a genuinely different approach.\n"
         f"2. Ask the user for help if you're stuck."
@@ -122,7 +122,7 @@ with open(RETRY_LOG, "w") as f:
 if count + 1 == WARN_AT:
     sys.stderr.write(
         f"[guardrail] You are repeating the same '{tool_name}' call for the "
-        f"{count + 1}{'nd' if count + 1 == 2 else 'th'} time. "
+        f"{count + 1}{ {1: 'st', 2: 'nd', 3: 'rd'}.get(count + 1, 'th') } time. "
         f"If it didn't work before, consider a different approach."
     )
     sys.exit(0)
